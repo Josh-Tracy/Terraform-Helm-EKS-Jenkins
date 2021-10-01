@@ -3,3 +3,5 @@
 kubeconfig_dev-cluster
 terraform.tfstate
 terraform.tfstate.backup
+.terraform/modules/my-cluster
+.terraform/modules/modules.json
