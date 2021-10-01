@@ -1,0 +1,5 @@
+.terraform/providers
+.terraform.lock.hcl
+kubeconfig_dev-cluster
+terraform.tfstate
+terraform.tfstate.backup
