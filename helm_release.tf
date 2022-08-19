@@ -1,15 +1,3 @@
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.dev-cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.dev-cluster.certificate_authority.0.data)
-    exec {
-      api_version = "client.authentication.k8s.io/v1alpha1"
-      args        = ["eks", "get-token", "--cluster-name", data.aws_eks_cluster.dev-cluster.name]
-      command     = "aws"
-    }
-  }
-}
-
 resource "helm_release" "jenkins" {
   name       = "jenkins"
   repository = "https://charts.jenkins.io"
@@ -20,15 +8,18 @@ resource "helm_release" "jenkins" {
   ]
 
   set_sensitive {
-    name  = "controller.adminUser"
-    value = ""
+    name  = "adminUser"
+    value = var.jenkins_admin_user
   }
+
   set_sensitive {
-    name = "controller.adminPassword"
-    value = ""
+    name  = "adminPassword"
+    value = var.jenkins_admin_password
   }
-  set_sensitive {
-    name = "adminPassword"
-    value = ""
-  }
+}
+
+variable "create_cluster_primary_security_group_tags" {
+  description = "Indicates whether or not to tag the cluster's primary security group. This security group is created by the EKS service, not the module, and therefore tagging is handled after cluster creation"
+  type        = bool
+  default     = false
 }
