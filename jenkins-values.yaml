@@ -19,7 +19,8 @@ controller:
   # Used for label app.kubernetes.io/component
   componentName: "jenkins-controller"
   image: "jenkins/jenkins"
-  tag: "2.303.1-jdk11"
+  # tag: "2.346.3-jdk11"
+  tagLabel: jdk11
   imagePullPolicy: "Always"
   imagePullSecretName:
   # Optionally configure lifetime for controller-container
@@ -45,7 +46,7 @@ controller:
   # If you disable the non-Jenkins identity store and instead use the Jenkins internal one,
   # you should revert controller.adminUser to your preferred admin user:
   adminUser: "admin"
-  adminPassword: "Pa55w0rd!"
+  adminPassword: "testpassword"
   admin:
     existingSecret: ""
     userKey: jenkins-admin-user
@@ -115,11 +116,17 @@ controller:
   #   runAsNonRoot: true
   #   supplementalGroups: [1000]
   #   # capabilities: {}
+  # Container securityContext
+  containerSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
   servicePort: 8080
   targetPort: 8080
   # For minikube, set this to NodePort, elsewhere use LoadBalancer
   # Use ClusterIP if your setup includes ingress controller
-  serviceType: ClusterIP
+  serviceType: LoadBalancer
   # Use Local to preserve the client source IP and avoids a second hop for LoadBalancer and Nodeport type services,
   # but risks potentially imbalanced traffic spreading.
   serviceExternalTrafficPolicy:
@@ -136,7 +143,7 @@ controller:
   podLabels: {}
   # Used to create Ingress record (should used with ServiceType: ClusterIP)
   # nodePort: <to set explicitly, choose port between 30000-32767
-  # Enable Kubernetes Liveness and Readiness Probes
+  # Enable Kubernetes Startup, Liveness and Readiness Probes
   # if Startup Probe is supported, enable it too
   # ~ 2 minutes to allow Jenkins to restart when upgrading plugins. Set ReadinessTimeout to be shorter than LivenessTimeout.
   healthProbes: true
@@ -183,6 +190,9 @@ controller:
   agentListenerPort: 50000
   agentListenerHostPort:
   agentListenerNodePort:
+  agentListenerExternalTrafficPolicy:
+  agentListenerLoadBalancerSourceRanges:
+  - 0.0.0.0/0
   disabledAgentProtocols:
     - JNLP-connect
     - JNLP2-connect
@@ -228,10 +238,10 @@ controller:
 
   # List of plugins to be install during Jenkins controller start
   installPlugins:
-    - kubernetes:1.30.1
-    - workflow-aggregator:2.6
-    - git:4.8.2
-    - configuration-as-code:1.52
+    - kubernetes:3600.v144b_cd192ca_a_
+    - workflow-aggregator:581.v0c46fa_697ffd
+    - git:4.11.3
+    - configuration-as-code:1429.v09b_044a_c93de
 
   # Set to false to download the minimum required version of all dependencies.
   installLatestPlugins: true
@@ -252,6 +262,9 @@ controller:
 
   # Configures if plugins bundled with `controller.image` should be overwritten with the values of 'controller.installPlugins' on upgrade or redeployment.
   overwritePluginsFromImage: true
+
+  # Configures the restrictions for naming projects. Set this key to null or empty to skip it in the default config.
+  projectNamingStrategy: standard
 
   # Enable HTML parsing using OWASP Markup Formatter Plugin (antisamy-markup-formatter), useful with ghprb plugin.
   # The plugin is not installed by default, please update controller.installPlugins.
@@ -308,8 +321,13 @@ controller:
     #  welcome-message: |
     #    jenkins:
     #      systemMessage: Welcome to our CI\CD server.  This Jenkins is configured and managed 'as code'.
-    # Ignored if securityRealm is defined in controller.JCasC.configScripts and
-    # ignored if controller.enableXmlConfig=true as controller.securityRealm takes precedence
+    # Allows adding to the top-level security JCasC section. For legacy,  default the chart includes apiToken configurations
+    security:
+      apiToken:
+        creationOfLegacyTokenEnabled: false
+        tokenGenerationOnCreationEnabled: false
+        usageStatisticsEnabled: true
+    # Ignored if securityRealm is defined in controller.JCasC.configScripts
     securityRealm: |-
       local:
         allowsSignup: false
@@ -335,7 +353,7 @@ controller:
       # jcasc changes will cause a reboot and will only be applied at the subsequent start-up.  Auto-reload uses the
       # http://<jenkins_url>/reload-configuration-as-code endpoint to reapply config when changes to the configScripts are detected.
       enabled: true
-      image: kiwigrid/k8s-sidecar:1.12.2
+      image: kiwigrid/k8s-sidecar:1.15.0
       imagePullPolicy: IfNotPresent
       resources: {}
         #   limits:
@@ -361,6 +379,9 @@ controller:
       # Otherwise the namespace in which the sidecar is running will be used.
       # It's also possible to specify ALL to search in all namespaces:
       # searchNamespace:
+      containerSecurityContext:
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
 
     # Allows you to inject additional/other sidecars
     other: []
@@ -564,6 +585,7 @@ controller:
         /MwpRxxazoda9r45kqQpyG+XoM4pB+Fd3JzMc4FUGxfVPxJU4jLawnJJiZ3vqiSyaB0YyUL+Er1Q
         6NnqtR4gEBF0ZVlQmkycFvD4EC2boP943dLqNUvop+4R3SM1QMM6P5u8iTXtHd/VN4MwMyy1wtog
         hYAzODo1Jt59pcqqKJEas0C/lFJEB3frw4ImNx5fNlJYOpx+ijfQs9m39CevDq0=
+
 agent:
   enabled: true
   defaultsProviderTemplate: ""
@@ -576,7 +598,7 @@ agent:
   maxRequestsPerHostStr: "32"
   namespace:
   image: "jenkins/inbound-agent"
-  tag: "4.6-1"
+  tag: "4.11.2-4"
   workingDir: "/home/jenkins/agent"
   nodeUsageMode: "NORMAL"
   customJenkinsLabels: []
@@ -637,19 +659,25 @@ agent:
   # Configure the attributes as they appear in the corresponding Java class for that type
   # https://github.com/jenkinsci/kubernetes-plugin/tree/master/src/main/java/org/csanchez/jenkins/plugins/kubernetes/volumes/workspace
   workspaceVolume: {}
-  # - type: DynamicPVC
-  #   configMapName: myconfigmap
-  # - type: EmptyDir
-  #   memory: false
-  # - type: HostPath
-  #   hostPath: /var/lib/containers
-  # - type: Nfs
-  #   readOnly: false
-  #   serverAddress: "192.0.2.0"
-  #   serverPath: /var/lib/containers
-  # - type: PVC
-  #   claimName: mypvc
-  #   readOnly: false
+  ## DynamicPVC example
+  # type: DynamicPVC
+  # configMapName: myconfigmap
+  ## EmptyDir example
+  # type: EmptyDir
+  # memory: false
+  ## HostPath example
+  # type: HostPath
+  # hostPath: /var/lib/containers
+  ## NFS example
+  # type: Nfs
+  # readOnly: false
+  # serverAddress: "192.0.2.0"
+  # serverPath: /var/lib/containers
+  ## PVC example
+  # type: PVC
+  # claimName: mypvc
+  # readOnly: false
+  #
   # Pod-wide environment, these vars are visible to any container in the agent pod
   envVars: []
   # - name: PATH
@@ -690,6 +718,10 @@ agent:
   connectTimeout: 100
   # Annotations to apply to the pod.
   annotations: {}
+
+  # Disable the default Jenkins Agent configuration.
+  # Useful when configuring agents only with the podTemplates value, since the default podTemplate populated by values mentioned above will be excluded in the rendered template.
+  disableDefaultAgent: false
 
   # Below is the implementation of custom pod templates for the default configured kubernetes cloud.
   # Add a key under podTemplates for each pod template. Each key (prior to | character) is just a label, and can be any value.
@@ -825,6 +857,7 @@ backup:
   image:
     repository: "maorfr/kube-tasks"
     tag: "0.2.0"
+  imagePullSecretName:
   # Additional arguments for kube-tasks
   # Ref: https://github.com/maorfr/kube-tasks#simple-backup
   extraArgs: []
@@ -867,3 +900,10 @@ backup:
   #  drop:
   #    - NET_RAW
 checkDeprecation: true
+
+awsSecurityGroupPolicies:
+  enabled: false
+  policies:
+    - name: ""
+      securityGroupIds: []
+      podSelector: {}
