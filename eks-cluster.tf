@@ -4,7 +4,7 @@ module "my-cluster" {
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
-  subnet_ids         = [aws_subnet.dev1-subnet.id, aws_subnet.dev2-subnet.id]
+  subnet_ids      = [aws_subnet.dev1-subnet.id, aws_subnet.dev2-subnet.id]
   vpc_id          = aws_vpc.dev-vpc.id
 
 
@@ -12,7 +12,7 @@ module "my-cluster" {
     ami_type       = "AL2_x86_64"
     instance_types = var.worker_group_instance_type
 
-    attach_cluster_primary_security_group = true
+    attach_cluster_primary_security_group = false
     vpc_security_group_ids                = [aws_security_group.allow-web-traffic.id]
   }
 

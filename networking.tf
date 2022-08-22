@@ -13,9 +13,9 @@ resource "aws_subnet" "dev1-subnet" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "dev1-subnet"
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/elb"             = "1"
+    Name                                        = "dev1-subnet"
+    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
+    "kubernetes.io/role/elb"                    = "1"
   }
 }
 
@@ -26,9 +26,9 @@ resource "aws_subnet" "dev2-subnet" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "dev2-subnet"
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/elb"             = "1"
+    Name                                        = "dev2-subnet"
+    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
+    "kubernetes.io/role/elb"                    = "1"
   }
 }
 
@@ -91,14 +91,6 @@ resource "aws_security_group" "allow-web-traffic" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # ingress {
-  #     description      = "SSH"
-  #     from_port        = 22
-  #     to_port          = 22
-  #     protocol         = "tcp"
-  #     cidr_blocks      = ["0.0.0.0/0"]
-  #   }
-
   egress {
     from_port        = 0
     to_port          = 0
@@ -110,17 +102,4 @@ resource "aws_security_group" "allow-web-traffic" {
   tags = {
     Name = "allow-web"
   }
-}
-
-resource "aws_network_interface" "dev-server-nic" {
-  subnet_id       = aws_subnet.dev1-subnet.id
-  private_ips     = var.dev1_subnet_nic_private_ip
-  security_groups = [aws_security_group.allow-web-traffic.id]
-}
-
-resource "aws_eip" "one" {
-  vpc                       = true
-  network_interface         = aws_network_interface.dev-server-nic.id
-  associate_with_private_ip = aws_network_interface.dev-server-nic.private_ip
-  depends_on                = [aws_internet_gateway.dev-gw]
 }
